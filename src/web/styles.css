@@ -1,0 +1,15 @@
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85em;
+}
+.heartbeat {
+  display: flex;
+  gap: 2px;
+  height: 28px;
+  align-items: stretch;
+}
+.heartbeat > div {
+  flex: 1;
+  border-radius: 2px;
+  min-width: 3px;
+}

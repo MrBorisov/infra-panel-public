@@ -1,0 +1,1 @@
+ALTER TABLE `eve_sso_states` ADD `invite_token_enc` text;

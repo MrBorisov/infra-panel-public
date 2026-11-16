@@ -1,0 +1,36 @@
+[Unit]
+Description=Infra Panel: Telegram-бот оповещений
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=panelbot
+Group=panelbot
+WorkingDirectory=/opt/panel-bots
+# Секреты — в /etc/panel-bots-tg.env (root:panelbot, chmod 640). См. bots/README.md
+EnvironmentFile=/etc/panel-bots-tg.env
+ExecStart=/opt/panel-bots/venv/bin/python telegram-bot.py
+Restart=always
+RestartSec=10
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+# Боту нужны только Telegram/Discord и мост панели — всё это в интернете. Частные сети закрыты:
+# за VDS может быть внутренняя сеть (туннель, VPN), и подставной адрес из очереди не должен туда попасть.
+# Loopback открыт: через 127.0.0.53 идёт DNS. Если в /etc/resolv.conf DNS-сервер из частной
+# сети — добавьте IPAddressAllow=<его адрес> (bots/README.md)
+IPAddressDeny=10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 169.254.0.0/16 100.64.0.0/10 fc00::/7 fe80::/10
+
+[Install]
+WantedBy=multi-user.target
