@@ -1,18 +1,19 @@
-# План улучшений
+# Roadmap
 
-Что можно сделать дальше.
+What could be done next.
 
-## Оповещения
+## Alerts
 
-Первый пункт касается и Telegram-бота (`bots/telegram-bot.py`), и Discord-поллера (`bots/discord-poller.py`).
+The first item affects both the Telegram bot (`bots/telegram-bot.py`) and the Discord poller (`bots/discord-poller.py`).
 
-- **Двойная отправка.** Если `mark-sent` не дошёл до панели, бот на следующем круге отправит те же сообщения ещё раз. Варианты: повторять `mark-sent` или помнить отправленные id на стороне бота.
-- **Напоминания о сроках в часовом поясе пользователей.** Граница суток и окно «повторы с 9:00» сейчас по времени сервера, а оно часто UTC: пороги (за 7/3/1 день и в день срока, у доменов ещё за 30) приходят ночью по местному времени. Вариант: часовой пояс только для панели (`TZ` в drop-in юнита, системное время сервера не трогать) и окно с 9:00 для всех напоминаний, не только повторов.
+- **Double sending.** If `mark-sent` does not reach the panel, the bot sends the same messages again on the next round. Options: retry `mark-sent`, or remember sent ids on the bot side.
+- **Due-date reminders in the users' time zone.** The day boundary and the "repeats from 9:00" window use server time, which is often UTC: thresholds (7/3/1 days before and on the day, plus 30 days for domains) arrive at night local time. Option: a time zone for the panel only (`TZ` in a unit drop-in, leaving the server's system time alone) and the 9:00 window for all reminders, not just repeats.
 
-## Инфраструктура
+## Infrastructure
 
-- Импорт из CSV/Excel (сейчас списком вставляются только домены).
-- Интеграция с Passwork API: поиск записей прямо из панели.
-- Статус VM и баланс через API хостеров (Hetzner, Timeweb, Selectel…).
-- Метрики по SSH: диск, память, нагрузка.
-- Проверка, что DNS-запись домена указывает на нужный сервер.
+- Import from CSV/Excel (only domains can be pasted as a list now).
+- Passwork API integration: search entries right from the panel.
+- VM status and balance via hosting provider APIs (Hetzner, Timeweb, Selectel…).
+- Metrics over SSH: disk, memory, load.
+- Check that a domain's DNS record points to the right server.
+- English UI (the interface and alert texts are in Russian now).

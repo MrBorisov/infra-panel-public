@@ -1,218 +1,220 @@
 # Infra Panel
 
-Панель для учёта инфраструктуры. Хранит VPS, хостинг сайтов, сайты, домены, аккаунты у провайдеров и доступы к ним. Следит за доступностью серверов и сайтов, сроками доменов, SSL-сертификатов и оплаты. Оповещения уходят в Telegram и Discord. У каждого пользователя своё пространство, доступом к нему можно поделиться.
+A self-hosted panel for keeping track of your infrastructure. It stores VPSes, web hosting, sites, domains, provider accounts and the credentials for them. It watches server and site availability, plus domain, SSL certificate and payment due dates. Alerts go to Telegram and Discord. Every user has their own workspace and can share access to it.
 
-## Что умеет
+> The user interface, the alert texts and the code comments are in Russian. UI labels below are given in English with the original Russian label in quotes, e.g. Settings («Настройки»).
 
-- **Объекты и связи.** Аккаунт провайдера (регистратор, VPS, хостинг, DNS) → сервер / хостинг / домен → сайт. В карточке сайта — его домен и сервер или хостинг, в карточке домена — регистратор и DNS, в карточке сервера — сайты на нём.
-- **Доступы.** Логины, пароли, SSH-ключи и API-токены прикрепляются к любому объекту. Пароли хранятся в базе в зашифрованном виде (AES-256-GCM). Готовая команда `ssh -p … user@host` копируется в один клик. К каждому доступу можно приложить ссылку на запись в Passwork.
-- **Мониторинг.**
-  - серверы: TCP-проверка порта (по умолчанию 22);
-  - сайты: HTTP-код, время ответа и, если нужно, наличие проверочного текста на странице;
-  - SSL-сертификаты: дата окончания;
-  - домены: дата окончания через RDAP, для .ru/.рф/.su через WHOIS.
-- **Сроки.** Оплата серверов и хостинга, окончание доменов и SSL. Кнопка «Отметить оплату» сдвигает дату на месяц или год. Напоминания приходят за 7, 3, 1 день и в день срока (домены ещё и за 30). Просроченное напоминается снова: первую неделю каждый день (не раньше 9 утра по времени сервера), потом раз в неделю, после месяца — перестаёт.
-- **Пространства и делегирование.** У каждого пользователя своё пространство: серверы, сайты, домены и пароли. Владелец приглашает других по одноразовой ссылке (по ней же новичок регистрируется сам по email) и выдаёт права **отдельно** на инфраструктуру (нет / просмотр / правка и пароли) и на каждый подключённый модуль, плюс право управлять участниками. Например, можно дать коллеге смотреть инвентарь, не показывая пароли от серверов. Управляющий участниками не выдаёт прав больше своих и не назначает других управляющих.
-- **Оповещения.** Личный Telegram с выбранными темами (после привязки бот присылает сводку: что не работает и какие сроки горят) и каналы пространства: свой Telegram-бот, свой Discord-бот или Discord-вебхук. Сообщения уходят только тем, у кого есть права на модуль. Подробнее — раздел «Оповещения».
-- **Безопасность.** 2FA (TOTP), журнал действий, включая каждый просмотр пароля. Системный администратор управляет пользователями, но в чужие пространства не заходит. Изоляция пространств покрыта тестами (`npm test`).
-- **Быстрое добавление.** Форма открывается из шапки, поиска (`⌘K` / `Ctrl+K` / `/`) и связанных списков карточки. Связанный объект создаётся прямо из выпадающего списка («+ Создать»), логин и пароль вводятся в той же форме. Автозаполнение: адрес сайта → название, домен и сервер (по DNS), hostname → IP, провайдер → ссылка на ЛК. «Сохранить и добавить ещё» оставляет выбранные связи и валюту. Домены можно вставить списком: дубликаты отмечаются, сроки подтягиваются сами.
+## Features
 
-## Стек
+- **Objects and links.** Provider account (registrar, VPS, hosting, DNS) → server / hosting / domain → site. A site card shows its domain and server or hosting, a domain card shows its registrar and DNS, a server card shows the sites on it.
+- **Credentials.** Logins, passwords, SSH keys and API tokens can be attached to any object. Passwords are stored encrypted in the database (AES-256-GCM). A ready `ssh -p … user@host` command is copied in one click. Each credential can link to an entry in an external password manager (Passwork).
+- **Monitoring.**
+  - servers: TCP port check (22 by default);
+  - sites: HTTP status, response time and, optionally, a keyword that must be on the page;
+  - SSL certificates: expiry date;
+  - domains: expiry date via RDAP, and via WHOIS for .ru/.рф/.su.
+- **Due dates.** Server and hosting payments, domain and SSL expiry. The "Mark as paid" («Отметить оплату») button moves the date by a month or a year. Reminders arrive 7, 3 and 1 day before and on the day (domains also 30 days before). Overdue items are reminded again: daily for the first week (not before 9 a.m. server time), then weekly, and they stop after a month.
+- **Workspaces and delegation.** Every user has their own workspace with servers, sites, domains and passwords. The owner invites others with a one-time link (a newcomer can also sign up with email through it) and grants rights **separately** for the infrastructure (none / view / edit and passwords) and for each installed module, plus the right to manage members. For example, a colleague can see the inventory without seeing server passwords. A member manager cannot grant more rights than they have and cannot appoint other managers.
+- **Alerts.** Personal Telegram with chosen topics (after linking, the bot sends a summary of what is down and which dates are close) and workspace channels: your own Telegram bot, your own Discord bot or a Discord webhook. Messages go only to people with rights to the relevant data. See "Alerts" below.
+- **Security.** 2FA (TOTP) and an audit log that records every password view. The system administrator manages users but cannot enter other people's workspaces. Workspace isolation is covered by tests (`npm test`).
+- **Quick entry.** The form opens from the header, from search (`⌘K` / `Ctrl+K` / `/`) and from related lists on a card. A related object can be created straight from a dropdown ("+ Create"), and login and password are entered in the same form. Autofill: site URL → name, domain and server (via DNS), hostname → IP, provider → link to its control panel. "Save and add another" keeps the chosen links and currency. Domains can be pasted as a list: duplicates are marked and expiry dates are fetched automatically.
 
-Node.js 24+, TypeScript, Fastify, SQLite (better-sqlite3 + Drizzle), React + Mantine. Всё работает как одно приложение с одной базой в одном файле.
+## Stack
 
-## Развёртывание на сервере (Docker)
+Node.js 24+, TypeScript, Fastify, SQLite (better-sqlite3 + Drizzle), React + Mantine. It runs as a single app with a single database file.
 
-Нужны сервер с Docker и домен, A-запись которого указывает на этот сервер.
+## Deploying with Docker
+
+You need a server with Docker and a domain whose A record points to it.
 
 ```bash
 git clone https://github.com/MrBorisov/infra-panel-public.git infra-panel && cd infra-panel
 cp .env.example .env
-openssl rand -base64 32   # вставить результат в ENCRYPTION_KEY
-nano .env                 # DOMAIN, PUBLIC_URL и боты — см. «Настройки (.env)»
+openssl rand -base64 32   # put the result into ENCRYPTION_KEY
+nano .env                 # DOMAIN, PUBLIC_URL and bots — see "Settings (.env)"
 docker compose up -d --build
 ```
 
-Caddy сам выпустит HTTPS-сертификат для `DOMAIN`.
+Caddy issues the HTTPS certificate for `DOMAIN` by itself.
 
-Первый администратор:
+First administrator:
 
 ```bash
-docker compose exec app node dist/server/cli.js create-user --email you@example.com --name "Имя" --role admin
+docker compose exec app node dist/server/cli.js create-user --email you@example.com --name "Name" --role admin
 ```
 
-Команда выведет сгенерированный пароль. Войдите, смените пароль и включите 2FA в «Настройках». Первый пользователь становится владельцем пространства «Основное», остальные получают своё. Людей в своё пространство зовите через «Участники» → «Пригласить». По ссылке человек входит в свой аккаунт или заводит новый (email и пароль) и сразу вступает в пространство. Без ссылки аккаунт заводит администратор системы (раздел «Пользователи»).
+The command prints a generated password. Sign in, change the password and enable 2FA in Settings («Настройки»). The first user becomes the owner of the "Main" («Основное») workspace, everyone else gets their own. Invite people to your workspace via Members («Участники») → Invite («Пригласить»). With the link a person signs in to their account or creates a new one (email and password) and joins the workspace right away. Without a link, accounts are created by the system administrator (Users, «Пользователи»).
 
-Обновление:
+Update:
 
 ```bash
 git pull && docker compose up -d --build
 ```
 
-Миграции базы применяются автоматически при старте.
+Database migrations are applied automatically on start.
 
-## Развёртывание рядом с другим сайтом (без Docker)
+## Deploying next to other sites (without Docker)
 
-Если на сервере уже работает nginx с другими сайтами, Docker-вариант не подходит: Caddy займёт порты 80 и 443. Для такого случая есть `scripts/deploy.sh`: свой Node 24 в `/opt/panel/node` (системный не трогает), пользователь `panel`, сервис на `127.0.0.1:8090`, сайт в nginx, сертификат через certbot и ночной бэкап.
+If nginx already serves other sites on the server, the Docker setup does not fit: Caddy would take ports 80 and 443. For this case there is `scripts/deploy.sh`: its own Node 24 in `/opt/panel/node` (the system Node is left alone), a `panel` user, a service on `127.0.0.1:8090`, an nginx site, a certbot certificate and a nightly backup.
 
-Заранее нужны nginx, certbot, `build-essential`, `python3` и A-запись домена на этот сервер. Запускать на сервере от своего пользователя с sudo (не от root и не от `panel`):
+You need nginx, certbot, `build-essential`, `python3` and the domain's A record pointing to the server. Run it on the server as your own user with sudo (not as root and not as `panel`):
 
 ```bash
-scp scripts/deploy.sh <сервер>:/tmp/panel-deploy.sh   # со своей машины
-PANEL_DOMAIN=panel.example.com PANEL_GIT_URL=https://github.com/MrBorisov/infra-panel-public.git bash /tmp/panel-deploy.sh install   # на сервере
+scp scripts/deploy.sh <server>:/tmp/panel-deploy.sh   # from your machine
+PANEL_DOMAIN=panel.example.com PANEL_GIT_URL=https://github.com/MrBorisov/infra-panel-public.git bash /tmp/panel-deploy.sh install   # on the server
 ```
 
-`PANEL_DOMAIN` (домен панели) обязателен всегда, `PANEL_GIT_URL` (откуда клонировать: этот репозиторий или свой форк) — при установке. Порт, пользователь и каталог — тоже переменные `PANEL_*`, см. шапку скрипта. Заданные при установке `PANEL_*` передавайте и при каждом выкате.
+`PANEL_DOMAIN` (the panel's domain) is always required, `PANEL_GIT_URL` (where to clone from: this repository or your fork) is needed for install. Port, user and directory are `PANEL_*` variables too, see the script header. Pass the `PANEL_*` values you used at install on every deploy as well.
 
-Скрипт создаст пользователя `panel`, ключ деплоя и `.env` с новым `ENCRYPTION_KEY`. Для приватного репозитория он напечатает публичный ключ: добавьте его в Deploy keys репозитория (только чтение) и нажмите Enter. Дальше скрипт склонирует код, соберёт и запустит панель, получит сертификат и спросит email и имя первого администратора.
+The script creates the `panel` user, a deploy key and a `.env` with a fresh `ENCRYPTION_KEY`. For a private repository it prints the public key: add it to the repository's Deploy keys (read-only) and press Enter. Then it clones the code, builds and starts the panel, gets the certificate and asks for the first administrator's email and name.
 
-### Выкат и откат
+### Deploy and rollback
 
-Выкат — с сервера, от своего пользователя с sudo. Сначала план, потом сам выкат:
+Deploys run on the server, as your own user with sudo. First the plan, then the deploy itself:
 
 ```bash
 PANEL_DOMAIN=panel.example.com bash /opt/panel/app/scripts/deploy.sh --dry-run
 PANEL_DOMAIN=panel.example.com bash /opt/panel/app/scripts/deploy.sh
 ```
 
-Скрипт подтягивает `master`, показывает план, спрашивает `[y/N]` и по изменённым файлам решает, что делать: только документы — ничего; `src/web/` — сборка без рестарта; миграции в `drizzle/` — сначала бэкап `pre-deploy-*.db`; `package-lock.json` — `npm ci`; остальное — сборка и рестарт. Если изменился сам `deploy.sh`, юниты systemd переписываются, а прежние остаются рядом как `*.prev`. После выката идут проверки (юнит активен, `/api/health`, главная, `/api/me` без входа → 401).
+The script pulls `master`, shows the plan, asks `[y/N]` and decides what to do from the changed files: docs only — nothing; `src/web/` — build without restart; migrations in `drizzle/` — a `pre-deploy-*.db` backup first; `package-lock.json` — `npm ci`; anything else — build and restart. If `deploy.sh` itself changed, the systemd units are rewritten and the old ones are kept next to them as `*.prev`. After the deploy it runs checks (unit active, `/api/health`, home page, `/api/me` without a session → 401).
 
-Дошёл ли выкат — последняя строка журнала должна называть новый коммит: снаружи недошедший выкат не виден, старая панель продолжает работать.
+To see whether a deploy finished, check that the last log line names the new commit: from outside an unfinished deploy is invisible, the old panel keeps working.
 
 ```bash
 tail -n 3 /opt/panel/app/.git/panel_deploy.log
 ```
 
-Если шаг упал до рестарта, сервис работает на прежнем коде: исправьте причину и запустите скрипт снова. Причины сбоев — `sudo journalctl -u panel -n 50`.
+If a step failed before the restart, the service still runs the previous code: fix the cause and run the script again. Failure reasons are in `sudo journalctl -u panel -n 50`.
 
-- **Сервис не поднялся после смены юнитов:** `sudo cp /etc/systemd/system/panel.service.prev /etc/systemd/system/panel.service && sudo systemctl daemon-reload && sudo systemctl restart panel`.
-- **Мониторинг пишет «Не удалось найти адрес» у всех сайтов.** Юнит запрещает панели частные сети (`IPAddressDeny`), а DNS-сервер из частной сети разрешает, только если тот был в `/etc/resolv.conf` при записи юнита. Сменили DNS — допишите в юнит `IPAddressAllow=<адрес>` и перезапустите. С `MONITOR_ALLOW_PRIVATE=true` запрета нет.
-- **Откат кода без миграций** — `git revert` плохого коммита, пуш, обычный выкат. **С миграциями** чаще правильнее исправить новым коммитом; если базу нужно вернуть: остановить `panel`, вернуть `pre-deploy-*.db` этого выката (см. «Резервные копии»), затем `git revert`, пуш и выкат. Между возвратом базы и выкатом панель не запускайте: код на диске ещё новый и снова применит миграции к старой базе. Данные, записанные после выката, пропадут.
+- **The service did not come up after the units changed:** `sudo cp /etc/systemd/system/panel.service.prev /etc/systemd/system/panel.service && sudo systemctl daemon-reload && sudo systemctl restart panel`.
+- **Monitoring says it cannot resolve the address of every site.** The unit blocks private networks for the panel (`IPAddressDeny`) and allows a DNS server from a private network only if it was in `/etc/resolv.conf` when the unit was written. If you changed DNS, add `IPAddressAllow=<address>` to the unit and restart. With `MONITOR_ALLOW_PRIVATE=true` there is no block.
+- **Rolling back code without migrations** — `git revert` the bad commit, push, deploy as usual. **With migrations** it is usually better to fix forward with a new commit. If the database must be restored: stop `panel`, restore that deploy's `pre-deploy-*.db` (see "Backups"), then `git revert`, push and deploy. Do not start the panel between restoring the database and deploying: the code on disk is still new and would apply the migrations to the old database again. Data written after the deploy is lost.
 
-## Настройки (.env)
+## Settings (.env)
 
-Формат: одна строка — одна переменная, `КЛЮЧ=значение`. Кавычки не обязательны: `КЛЮЧ="значение"` и `КЛЮЧ=значение` работают одинаково. Пробелы вокруг `=` и по краям значения обрезаются.
+Format: one variable per line, `KEY=value`. Quotes are optional: `KEY="value"` and `KEY=value` work the same. Spaces around `=` and at the ends of the value are trimmed.
 
-**`#` начинает комментарий даже без пробела перед ним:** `SECRET=abc#def` прочитается как `abc`. Значение с `#` берите в двойные кавычки: `SECRET="abc#def"`.
+**`#` starts a comment even without a space before it:** `SECRET=abc#def` is read as `abc`. Put values containing `#` in double quotes: `SECRET="abc#def"`.
 
-После правки: `sudo systemctl restart panel` (или `docker compose up -d`).
+After editing: `sudo systemctl restart panel` (or `docker compose up -d`).
 
-| Переменная | Что это |
+| Variable | Meaning |
 |---|---|
-| `DOMAIN` | Только для Docker: домен, на который Caddy получает сертификат |
-| `PUBLIC_URL` | Адрес панели: ссылки в оповещениях и приглашениях |
-| `ENCRYPTION_KEY` | Ключ шифрования паролей и токенов (`openssl rand -base64 32`). **Потеряете — пароли не расшифровать.** Храните копию отдельно от сервера |
-| `PORT`, `HOST`, `DATA_DIR` | Где слушать и где лежит база: по умолчанию `127.0.0.1:3000` и `./data`, скрипт деплоя ставит `127.0.0.1:8090` и `/opt/panel/data` |
-| `APP_NAME` | Название в оповещениях и в приложении 2FA |
-| `CHECK_INTERVAL_SEC`, `FAIL_THRESHOLD` | Как часто проверять серверы и сайты и после скольких неудач подряд считать их упавшими (60 и 2) |
-| `CHECKS_RETENTION_DAYS` | Сколько хранить историю проверок (30) |
-| `SESSION_TTL_HOURS` | Время жизни входа (168 = неделя) |
-| `NODE_ENV`, `COOKIE_SECURE` | `NODE_ENV=production` (его ставят Dockerfile и `deploy.sh`) включает cookie `Secure` с именем `__Host-sid`: вход работает только по HTTPS. `COOKIE_SECURE=true`/`false` задаёт это явно |
-| `LOG_LEVEL` | Уровень логов (`info`) |
-| `BOT_API_TOKEN` | Секрет моста для Discord-поллера на VDS (`openssl rand -hex 32`) |
-| `TG_BOT_API_TOKEN` | Секрет моста для Telegram-бота на VDS |
-| `TELEGRAM_BOT_USERNAME` | Username бота панели, через которого пользователи привязывают личный Telegram |
-| `TG_LINK_TOKEN_EXPIRE_MIN` | Сколько минут действует ссылка привязки Telegram (15) |
-| `BOT_ALLOWED_IPS` | IP VDS с ботами через запятую: мост `/api/v1/*` принимает запросы только с них. Пусто — с любых адресов (тогда утёкший секрет моста работает откуда угодно, а мост отдаёт расшифрованные токены ботов) |
-| `MONITOR_ENABLED` | `false` выключает мониторинг (для разработки) |
-| `MONITOR_ALLOW_PRIVATE` | `true` разрешает проверять внутренние адреса (127.0.0.1, 10.x, 192.168.x…). По умолчанию запрещено: иначе любой пользователь через мониторинг заглядывал бы во внутреннюю сеть сервера. Включать, только если все пользователи свои |
+| `DOMAIN` | Docker only: the domain Caddy gets a certificate for |
+| `PUBLIC_URL` | The panel's address, used in links in alerts and invites |
+| `ENCRYPTION_KEY` | Key for encrypting passwords and tokens (`openssl rand -base64 32`). **Lose it and the passwords cannot be decrypted.** Keep a copy away from the server |
+| `PORT`, `HOST`, `DATA_DIR` | Where to listen and where the database lives: `127.0.0.1:3000` and `./data` by default; the deploy script sets `127.0.0.1:8090` and `/opt/panel/data` |
+| `APP_NAME` | Name shown in alerts and in the 2FA app |
+| `CHECK_INTERVAL_SEC`, `FAIL_THRESHOLD` | How often to check servers and sites, and after how many failures in a row to consider them down (60 and 2) |
+| `CHECKS_RETENTION_DAYS` | How long to keep check history (30) |
+| `SESSION_TTL_HOURS` | Session lifetime (168 = a week) |
+| `NODE_ENV`, `COOKIE_SECURE` | `NODE_ENV=production` (set by the Dockerfile and `deploy.sh`) turns on a `Secure` cookie named `__Host-sid`: sign-in works over HTTPS only. `COOKIE_SECURE=true`/`false` sets this explicitly |
+| `LOG_LEVEL` | Log level (`info`) |
+| `BOT_API_TOKEN` | Bridge secret for the Discord poller on the VDS (`openssl rand -hex 32`) |
+| `TG_BOT_API_TOKEN` | Bridge secret for the Telegram bot on the VDS |
+| `TELEGRAM_BOT_USERNAME` | Username of the panel's bot that users link their personal Telegram to |
+| `TG_LINK_TOKEN_EXPIRE_MIN` | How many minutes a Telegram link stays valid (15) |
+| `BOT_ALLOWED_IPS` | Comma-separated IPs of the bot VDS: the `/api/v1/*` bridge accepts requests only from them. Empty — from anywhere (then a leaked bridge secret works from anywhere, and the bridge hands out decrypted bot tokens) |
+| `MONITOR_ENABLED` | `false` turns monitoring off (for development) |
+| `MONITOR_ALLOW_PRIVATE` | `true` allows checking internal addresses (127.0.0.1, 10.x, 192.168.x…). Off by default: otherwise any user could look into the server's internal network through monitoring. Turn it on only if all users are trusted |
 
-## Оповещения (Telegram и Discord)
+## Alerts (Telegram and Discord)
 
-Панель ничего не отправляет сама: из РФ API Telegram и Discord недоступны. Сообщения ждут в очереди, их забирают через мост `/api/v1/*` и отправляют боты-посредники на зарубежной VDS, в том числе от имени своих ботов пользователей. Установка ботов и секреты моста в `.env` панели — [bots/README.md](bots/README.md).
+The panel sends nothing itself: it was built for a hosting location where the Telegram and Discord APIs are blocked. Messages wait in a queue; relay bots on a VDS abroad fetch them through the `/api/v1/*` bridge and send them, including on behalf of users' own bots. Installing the bots and the bridge secrets in the panel's `.env` — [bots/README.md](bots/README.md). If your server can reach Telegram and Discord directly, the bots can run on the same server.
 
-**Как подключить** (раздел «Оповещения»):
-- **Личный Telegram** — «Привязать Telegram» → Start у бота. Придёт тестовое сообщение, а если что-то не работает или сроки горят — сводка.
-- **Discord-вебхук** — в Discord: настройки канала → «Интеграции» → «Вебхуки» → «Новый вебхук» → «Копировать URL». В панели: «Добавить канал» → «Discord-вебхук», темы, затем «Тестовое сообщение».
-- **Свой Discord-бот** — токен из [discord.com/developers](https://discord.com/developers/applications) (Bot → Reset Token), бот приглашён на сервер с правами View Channel, Send Messages, Embed Links; ID канала — в Discord включить режим разработчика и «Копировать ID» у канала. В Discord бот висит офлайн: он только отправляет.
-- **Свой Telegram-бот в группу или канал** — токен от @BotFather и Chat ID: бота добавить в группу (в канал — админом), переслать оттуда сообщение @getidsbot; у публичного канала можно `@имя`.
+**How to connect** (Alerts, «Оповещения»):
+- **Personal Telegram** — "Link Telegram" («Привязать Telegram») → Start in the bot. A test message arrives, and if something is down or dates are close, a summary too.
+- **Discord webhook** — in Discord: channel settings → Integrations → Webhooks → New Webhook → Copy Webhook URL. In the panel: "Add channel" → "Discord webhook", topics, then "Test message".
+- **Your own Discord bot** — a token from [discord.com/developers](https://discord.com/developers/applications) (Bot → Reset Token), the bot invited to the server with View Channel, Send Messages and Embed Links; the channel ID — enable developer mode in Discord and use "Copy ID" on the channel. The bot shows as offline in Discord: it only sends.
+- **Your own Telegram bot in a group or channel** — a token from @BotFather and a Chat ID: add the bot to the group (to a channel as an admin) and forward a message from there to @getidsbot; a public channel can use `@name`.
 
-Каналы пространства добавляют владелец и участники с правом «Правка и пароли» на инфраструктуру или правом управления модулем. Темы канала — не шире прав того, кто его настраивает.
+Workspace channels can be added by the owner and by members with "Edit and passwords" on the infrastructure or the right to manage a module. A channel's topics cannot be wider than the rights of the person setting it up.
 
-## Модули
+## Modules
 
-Ядро панели — учёт: пользователи и вход, пространства и участники, серверы, сайты, домены, хостинг, аккаунты и пароли, мониторинг, сроки, оповещения, журнал. Остальное подключается модулями поверх ядра (`src/modules/<модуль>/`, реестры `src/modules/server.ts` и `src/modules/web.ts`). Сейчас модулей нет. В ранних миграциях есть таблицы удалённого модуля EVE Online: их создают `0002`–`0006` и удаляет `0007_remove_eve`.
+The panel core is the inventory: users and sign-in, workspaces and members, servers, sites, domains, hosting, accounts and passwords, monitoring, due dates, alerts, audit log. Everything else plugs in as modules on top of the core (`src/modules/<module>/`, registries `src/modules/server.ts` and `src/modules/web.ts`). There are no modules right now. Early migrations contain tables of a removed EVE Online module: `0002`–`0006` create them and `0007_remove_eve` drops them.
 
-- Администратор системы выключает модуль в разделе «Модули»: для всего сайта или для отдельного пространства. Новые пространства получают модуль включённым. Права участников на модуль и его данные при выключении сохраняются и вернутся при включении.
-- Модуль можно убрать и из сборки: удалить его строку в `src/modules/server.ts` и `src/modules/web.ts` и папку `src/modules/<модуль>/`. Ядро соберётся и заработает без него. Таблицы модуля останутся в базе, пока их не удалит отдельная миграция, а пользователи, входившие только через модуль, без пароля не войдут.
+- The system administrator turns a module off in Modules («Модули»): for the whole site or for a single workspace. New workspaces get the module enabled. Members' module rights and the module's data are kept while it is off and come back when it is turned on.
+- A module can also be removed from the build: delete its line in `src/modules/server.ts` and `src/modules/web.ts` and the `src/modules/<module>/` folder. The core builds and runs without it. The module's tables stay in the database until a separate migration drops them, and users who only signed in through the module cannot sign in without a password.
 
-## Резервные копии
+## Backups
 
-Без Docker `scripts/deploy.sh` ставит ночной бэкап: каждую ночь в 03:30 по времени сервера таймер `panel-backup.timer` сохраняет `panel-*.db` в `/opt/panel/data/backups/`, файлы старше 30 дней удаляются. Перед выкатом с миграциями туда же снимается `pre-deploy-*.db`.
+Without Docker, `scripts/deploy.sh` sets up a nightly backup: every night at 03:30 server time the `panel-backup.timer` saves `panel-*.db` to `/opt/panel/data/backups/`, and files older than 30 days are deleted. Before a deploy with migrations, a `pre-deploy-*.db` is saved there as well.
 
-Бэкап вручную:
+Manual backup:
 
 ```bash
 sudo -u panel -H bash -c 'cd /opt/panel/app && /opt/panel/node/bin/node dist/server/cli.js backup'
 ```
 
-Восстановление (база в режиме WAL, поэтому `-wal` и `-shm` убираем):
+Restore (the database runs in WAL mode, so `-wal` and `-shm` are removed):
 
 ```bash
 sudo systemctl stop panel
-sudo -u panel bash -c 'cd /opt/panel/data && mv panel.db panel.db.broken && rm -f panel.db-wal panel.db-shm && cp backups/<файл>.db panel.db'
+sudo -u panel bash -c 'cd /opt/panel/data && mv panel.db panel.db.broken && rm -f panel.db-wal panel.db-shm && cp backups/<file>.db panel.db'
 sudo systemctl start panel
 ```
 
-В Docker ночного бэкапа нет, копию снимают вручную:
+With Docker there is no nightly backup; take a copy by hand:
 
 ```bash
 docker compose exec app node dist/server/cli.js backup --out /data/backups/panel.db
 docker compose cp app:/data/backups/panel.db ./panel-$(date +%F).db
 ```
 
-Пароли в бэкапе зашифрованы, поэтому для восстановления нужен тот же `ENCRYPTION_KEY`. Храните ключ отдельно от бэкапов, например в Passwork.
+Passwords in the backup are encrypted, so restoring needs the same `ENCRYPTION_KEY`. Keep the key separately from the backups, for example in a password manager.
 
-## Безопасность
+## Security
 
-- Панель хранит доступы ко всей инфраструктуре, поэтому включите 2FA всем пользователям.
-- Если возможно, ограничьте доступ по IP (пример есть в `Caddyfile` и закомментирован в `/etc/nginx/sites-available/panel`, который пишет `deploy.sh`) или держите панель за VPN.
-- Сессии в cookie `HttpOnly` + `Secure` + `SameSite=Lax`. Изменяющие запросы с чужого `Origin` отклоняются. Вход ограничен по частоте попыток, а после 5 неверных кодов 2FA закрыт на 15 минут; о блокировке приходит предупреждение в Telegram.
-- Если администратор системы сбросит пользователю пароль или 2FA (раздел «Пользователи»), это попадёт в журнал его пространств и придёт ему в Telegram.
-- Пароль раскрывается только по кнопке, через 30 секунд снова скрывается, а каждый просмотр записывается в журнал.
-- Участник с правом «Просмотр» инфраструктуры видит инвентарь, но не пароли. Пароли видит только «Правка и пароли».
+- The panel holds access to your whole infrastructure, so enable 2FA for every user.
+- If possible, restrict access by IP (there is an example in `Caddyfile`, and a commented one in `/etc/nginx/sites-available/panel` written by `deploy.sh`) or keep the panel behind a VPN.
+- Sessions use `HttpOnly` + `Secure` + `SameSite=Lax` cookies. Modifying requests from a foreign `Origin` are rejected. Sign-in attempts are rate-limited, and after 5 wrong 2FA codes sign-in is locked for 15 minutes, with a warning sent to Telegram.
+- If the system administrator resets a user's password or 2FA (Users, «Пользователи»), it is written to the audit log of that user's workspaces and sent to them in Telegram.
+- A password is revealed only by a button, hidden again after 30 seconds, and every view is logged.
+- A member with "View" on the infrastructure sees the inventory but not the passwords. Only "Edit and passwords" sees passwords.
 
-## Разработка
+## Development
 
 ```bash
 npm install
-cp .env.example .env      # вписать ENCRYPTION_KEY: openssl rand -base64 32
-npm run cli -- create-user --email admin@local.test --name Админ --role admin
-npm run dev   # API на :3000, интерфейс на http://localhost:5173
+cp .env.example .env      # set ENCRYPTION_KEY: openssl rand -base64 32
+npm run cli -- create-user --email admin@local.test --name Admin --role admin
+npm run dev   # API on :3000, UI on http://localhost:5173
 ```
 
-Тесты сами задают базу во временной папке, ключ шифрования и секреты моста (`tests/helpers.ts`; тесты модуля — в `src/modules/<модуль>/tests/`), остальное берут из локального `.env`: `BOT_ALLOWED_IPS`, `MONITOR_ALLOW_PRIVATE` и подобное там не ставьте. Тесты ядра идут на демо-модуле (`tests/fixtures/demo-module.ts`), и есть набор совсем без модулей (`tests/core-only.test.ts`).
+Tests set up their own database in a temp folder, encryption key and bridge secrets (`tests/helpers.ts`; module tests live in `src/modules/<module>/tests/`) and take the rest from the local `.env`: do not put `BOT_ALLOWED_IPS`, `MONITOR_ALLOW_PRIVATE` and the like there. Core tests run against a demo module (`tests/fixtures/demo-module.ts`), and there is a suite with no modules at all (`tests/core-only.test.ts`).
 
-Полезные команды:
+Useful commands:
 
-| Команда | Что делает |
+| Command | What it does |
 |---|---|
-| `npm run typecheck` | проверка типов |
-| `npm run build` | сборка в `dist/` |
-| `npm test` | все тесты (`tests/` и `src/modules/*/tests/`) |
-| `npm run db:generate` | SQL-миграция после изменения схемы (`src/server/db/schema.ts`, `src/modules/*/server/schema.ts`; пересборки таблиц и перенос данных — вручную, пример — `drizzle/0003_own_bots.sql`; уже опубликованные миграции не правятся) |
-| `npm run cli -- list-users` | список пользователей |
-| `npm run cli -- reset-password --email E [--reset-2fa]` | сброс пароля (и 2FA) |
+| `npm run typecheck` | type check |
+| `npm run build` | build into `dist/` |
+| `npm test` | all tests (`tests/` and `src/modules/*/tests/`) |
+| `npm run db:generate` | SQL migration after a schema change (`src/server/db/schema.ts`, `src/modules/*/server/schema.ts`; table rebuilds and data moves are written by hand, see `drizzle/0003_own_bots.sql`; published migrations are never edited) |
+| `npm run cli -- list-users` | list users |
+| `npm run cli -- reset-password --email E [--reset-2fa]` | reset a password (and 2FA) |
 
-Структура: `src/server/` — API ядра, `src/web/` — интерфейс ядра, `src/shared/` — общий код сервера и интерфейса, `src/modules/` — модули (сейчас пусто, только реестры), `drizzle/` — миграции, `bots/` — боты-посредники, `scripts/deploy.sh` — установка и выкат без Docker, `tests/` — тесты (`node:test`).
+Layout: `src/server/` — core API, `src/web/` — core UI, `src/shared/` — code shared by server and UI, `src/modules/` — modules (empty for now, just the registries), `drizzle/` — migrations, `bots/` — relay bots, `scripts/deploy.sh` — install and deploy without Docker, `tests/` — tests (`node:test`).
 
-Главное правило кода — изоляция пространств: каждый запрос к данным фильтруется по пространству (`getInWorkspace`/`inWorkspace` в `src/server/queries.ts`), ссылки между объектами проверяются `assertRefsInWorkspace`, а новый маршрут данных приходит с тестом в `tests/tenancy.test.ts`, что чужое пространство его не видит.
+The main rule of the code is workspace isolation: every data query is filtered by workspace (`getInWorkspace`/`inWorkspace` in `src/server/queries.ts`), links between objects are checked by `assertRefsInWorkspace`, and a new data route comes with a test in `tests/tenancy.test.ts` showing that another workspace cannot see it.
 
-## Что можно сделать дальше
+## What's next
 
-План улучшений — в [ROADMAP.md](ROADMAP.md). Доработки присылайте пулл-реквестами: `npm test` и `npm run typecheck` должны быть зелёными.
+The improvement plan is in [ROADMAP.md](ROADMAP.md). Send changes as pull requests: `npm test` and `npm run typecheck` must pass.
 
-## Кто написал
+## Who wrote it
 
-Весь код, тесты и документацию этого проекта написал Claude (модель Anthropic) в Claude Code. Автор проекта, MrBorisov, ставил задачи, принимал решения, проверял и выкатывал на свой сервер.
+All the code, tests and documentation of this project were written by Claude (an Anthropic model) in Claude Code. The project author, MrBorisov, set the tasks, made the decisions, reviewed the work and deployed it to their own server.
 
-## Лицензия
+## License
 
-© 2026 MrBorisov. Распространяется под лицензией [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-or-later).
+© 2026 MrBorisov. Licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-or-later).
 
-Коротко, своими словами (юридически значим только текст лицензии):
+In short, in plain words (only the license text is legally binding):
 
-- код можно использовать, изучать, менять и распространять как угодно, в том числе в коммерческих целях;
-- изменённую версию, которую вы распространяете, нужно выпускать под той же лицензией с исходным кодом;
-- то же самое — если вы не раздаёте программу, а даёте пользоваться ею по сети (SaaS, хостинг для клиентов): пользователям должен быть доступен исходный код запущенной версии, со всеми доработками;
-- гарантий нет.
+- you may use, study, change and distribute the code however you like, including commercially;
+- a modified version that you distribute must be released under the same license, with source code;
+- the same applies if you do not distribute the program but let people use it over a network (SaaS, hosting for clients): its users must be able to get the source code of the running version, with all changes;
+- there is no warranty.

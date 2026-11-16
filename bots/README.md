@@ -1,62 +1,62 @@
-# Боты оповещений (на зарубежной VDS)
+# Alert bots (on a VDS abroad)
 
-Из РФ API Telegram и Discord недоступны, поэтому панель ничего не отправляет сама. Она кладёт сообщения в очередь, а боты на зарубежной VDS забирают их через мост `/api/v1/bot/*` и `/api/v1/tg/*` и отправляют, в том числе от имени своих ботов пользователей (поля `bot_token` и `channel_id`, см. ниже).
+The panel was built for a hosting location where the Telegram and Discord APIs are blocked, so it sends nothing itself. It puts messages into a queue, and bots on a VDS abroad fetch them through the `/api/v1/bot/*` and `/api/v1/tg/*` bridge and send them, including on behalf of users' own bots (the `bot_token` and `channel_id` fields, see below).
 
-Подойдёт любая небольшая VDS за пределами РФ: боты не слушают порты, только ходят наружу — в Telegram, Discord и мост панели. Если там уже живут другие боты, ставьте эти рядом, под отдельным пользователем и в отдельных файлах `.env`.
+Any small VDS where Telegram and Discord are reachable will do: the bots listen on no ports and only make outgoing requests — to Telegram, Discord and the panel's bridge. If other bots already live there, put these next to them, under a separate user and with separate `.env` files.
 
-## 1. Новый Telegram-бот
+## 1. A new Telegram bot
 
-Создайте **отдельного** бота у [@BotFather](https://t.me/BotFather): у одного токена может быть только один потребитель `getUpdates`, поэтому бот, который уже работает где-то ещё, не подойдёт. Запомните токен и username, например `infra_panel_bot`.
+Create a **separate** bot with [@BotFather](https://t.me/BotFather): a token can have only one `getUpdates` consumer, so a bot that already runs somewhere else will not do. Note the token and the username, e.g. `infra_panel_bot`.
 
-## 2. Секреты моста
+## 2. Bridge secrets
 
-Сгенерируйте два секрета (на любой машине):
+Generate two secrets (on any machine):
 
 ```bash
-openssl rand -hex 32   # BOT_API_TOKEN — для Discord
-openssl rand -hex 32   # TG_BOT_API_TOKEN — для Telegram
+openssl rand -hex 32   # BOT_API_TOKEN — for Discord
+openssl rand -hex 32   # TG_BOT_API_TOKEN — for Telegram
 ```
 
-В `.env` панели на сервере (`/opt/panel/app/.env`) добавьте:
+Add to the panel's `.env` on the server (`/opt/panel/app/.env`):
 
 ```
-BOT_API_TOKEN=<первый секрет>
-TG_BOT_API_TOKEN=<второй секрет>
+BOT_API_TOKEN=<first secret>
+TG_BOT_API_TOKEN=<second secret>
 TELEGRAM_BOT_USERNAME=infra_panel_bot
-BOT_ALLOWED_IPS=<IP VDS>
+BOT_ALLOWED_IPS=<VDS IP>
 ```
 
-С `BOT_ALLOWED_IPS` мост `/api/v1/*` принимает запросы только с VDS: утёкший секрет не сработает с другого адреса. После этого: `sudo systemctl restart panel`.
+With `BOT_ALLOWED_IPS` the `/api/v1/*` bridge accepts requests only from the VDS: a leaked secret will not work from another address. Then: `sudo systemctl restart panel`.
 
-## 3. Установка на VDS
+## 3. Installing on the VDS
 
 ```bash
 sudo adduser --system --group --home /opt/panel-bots panelbot
 sudo mkdir -p /opt/panel-bots && sudo chown panelbot: /opt/panel-bots
-# скопировать сюда bots/telegram-bot.py и bots/discord-poller.py (scp или git)
+# copy bots/telegram-bot.py and bots/discord-poller.py here (scp or git)
 sudo -u panelbot python3 -m venv /opt/panel-bots/venv
 sudo -u panelbot /opt/panel-bots/venv/bin/pip install httpx
 ```
 
 `/etc/panel-bots-tg.env`:
 ```
-TELEGRAM_BOT_TOKEN=<токен от BotFather>
-TG_BOT_API_TOKEN=<второй секрет>
+TELEGRAM_BOT_TOKEN=<token from BotFather>
+TG_BOT_API_TOKEN=<second secret>
 PANEL_URL=https://panel.example.com
 ```
 
 `/etc/panel-bots-discord.env`:
 ```
-BOT_API_TOKEN=<первый секрет>
+BOT_API_TOKEN=<first secret>
 PANEL_URL=https://panel.example.com
 ```
 
-**Запрет частных сетей.** В юнитах стоит `IPAddressDeny` на частные сети (10/8, 172.16/12, 192.168/16 и др.): за VDS может быть внутренняя сеть (туннель, VPN), и бот не должен туда ходить, даже если в очередь попадёт подставной адрес. Перед установкой юнитов проверьте две вещи:
+**Private networks are blocked.** The units set `IPAddressDeny` on private networks (10/8, 172.16/12, 192.168/16 and others): there may be an internal network behind the VDS (a tunnel, a VPN), and the bot must not reach it even if a forged address gets into the queue. Before installing the units, check two things:
 
-- `grep nameserver /etc/resolv.conf` — если DNS-сервер из частной сети (не `127.0.0.53`), добавьте в оба юнита `IPAddressAllow=<его адрес>`, иначе боты не смогут резолвить имена;
-- `ip route` — если сеть за туннелем не из частных диапазонов, допишите её в `IPAddressDeny`.
+- `grep nameserver /etc/resolv.conf` — if the DNS server is in a private network (not `127.0.0.53`), add `IPAddressAllow=<its address>` to both units, otherwise the bots cannot resolve names;
+- `ip route` — if the network behind a tunnel is not in a private range, add it to `IPAddressDeny`.
 
-Права на секреты, юниты и запуск:
+Permissions on the secrets, the units and start:
 
 ```bash
 sudo chown root:panelbot /etc/panel-bots-*.env && sudo chmod 640 /etc/panel-bots-*.env
@@ -65,7 +65,7 @@ sudo systemctl daemon-reload && sudo systemctl enable --now panel-telegram panel
 journalctl -u panel-telegram -u panel-discord -f
 ```
 
-**Обновление.** `deploy.sh` ботов не трогает: если в `bots/` что-то поменялось, скопируйте файлы на VDS заново (если в юниты дописывали `IPAddressAllow`, перенесите его в новые):
+**Updating.** `deploy.sh` does not touch the bots: if something changed in `bots/`, copy the files to the VDS again (if you added `IPAddressAllow` to the units, carry it over to the new ones):
 
 ```bash
 scp bots/*.py bots/*.service root@<VDS>:/tmp/
@@ -75,25 +75,25 @@ scp bots/*.py bots/*.service root@<VDS>:/tmp/
 cd /tmp && install -o panelbot -g panelbot -m 644 telegram-bot.py discord-poller.py /opt/panel-bots/ && install -m 644 panel-telegram.service panel-discord.service /etc/systemd/system/ && systemctl daemon-reload && systemctl restart panel-telegram panel-discord
 ```
 
-## Проверка
+## Checking
 
-- В панели: «Оповещения» → «Привязать Telegram». Откроется бот, нажмите «Start». Бот ответит «✅ Аккаунт Infra Panel привязан», и придёт тестовое сообщение.
-- Discord: «Оповещения» → «Добавить канал» → «Discord-вебхук» → ссылка вебхука канала → «Тестовое сообщение».
-- Если в «Оповещениях» появилась плашка «В очереди скопились сообщения», значит бот не забирает очередь. Смотрите `journalctl` на VDS.
-- Мост отвечает `403` — одно из трёх: секреты на сервере панели и на VDS не совпадают; панель не перезапущена после правки `.env` (настройки читаются только при старте); IP ботов нет в `BOT_ALLOWED_IPS` — тогда в `journalctl -u panel` есть «Мост: запрос с адреса не из BOT_ALLOWED_IPS» с настоящим `ip`.
-- Start в Telegram без ответа и без строки `link ok/fail` в `journalctl -u panel-telegram` — проверьте, что `TELEGRAM_BOT_USERNAME` панели — тот же бот, чей токен на VDS (`getMe`), и что на нём не висит вебхук (`getWebhookInfo`, при нужде `deleteWebhook`).
-- Разовое `updates loop error: The read operation timed out` — сетевой сбой, бот продолжает сам.
+- In the panel: Alerts («Оповещения») → "Link Telegram" («Привязать Telegram»). The bot opens, press Start. The bot replies that the Infra Panel account is linked, and a test message arrives.
+- Discord: Alerts → "Add channel" → "Discord webhook" → the channel's webhook URL → "Test message".
+- If Alerts shows a "messages piling up in the queue" banner, the bot is not fetching the queue. Check `journalctl` on the VDS.
+- The bridge answers `403` — one of three: the secrets on the panel server and on the VDS differ; the panel was not restarted after editing `.env` (settings are read only on start); the bots' IP is not in `BOT_ALLOWED_IPS` — then `journalctl -u panel` has a "request from an address not in BOT_ALLOWED_IPS" line with the real `ip`.
+- Start in Telegram gets no reply and there is no `link ok/fail` line in `journalctl -u panel-telegram` — check that the panel's `TELEGRAM_BOT_USERNAME` is the same bot whose token is on the VDS (`getMe`), and that it has no webhook set (`getWebhookInfo`, `deleteWebhook` if needed).
+- A one-off `updates loop error: The read operation timed out` is a network glitch; the bot carries on by itself.
 
-## Свои боты пользователей
+## Users' own bots
 
-Своих Telegram- и Discord-ботов пользователи добавляют в «Оповещения» → «Каналы пространства» (как — [README.md](../README.md), «Оповещения»). Отдельно разворачивать для них ничего не нужно: в сообщении из очереди приходит токен бота пользователя (`bot_token`), и этот же посредник отправляет от его имени:
-- Telegram — `sendMessage` от бота пользователя. `getUpdates` чужого бота не трогается, поэтому бот может параллельно работать где-то ещё.
-- Discord — `POST /channels/{id}/messages` с `Authorization: Bot …`. Бот должен быть на сервере с правами View Channel, Send Messages, Embed Links.
+Users add their own Telegram and Discord bots in Alerts → workspace channels (how — [README.md](../README.md), "Alerts"). Nothing extra has to be deployed for them: a queued message carries the user's bot token (`bot_token`), and the same relay sends on its behalf:
+- Telegram — `sendMessage` from the user's bot. The other bot's `getUpdates` is not touched, so that bot can keep working elsewhere.
+- Discord — `POST /channels/{id}/messages` with `Authorization: Bot …`. The bot must be on the server with View Channel, Send Messages and Embed Links.
 
-Токены пользователей хранятся в панели в зашифрованном виде и передаются посреднику по HTTPS вместе с сообщением. В логи и в ошибки, которые уходят на сервер, они не попадают (`scrub`). Причина отказа («chat not found», «Missing Access») видна у канала в настройках.
+Users' tokens are stored encrypted in the panel and passed to the relay over HTTPS together with the message. They never get into logs or into errors sent back to the server (`scrub`). The rejection reason ("chat not found", "Missing Access") is shown on the channel in the settings.
 
-## Поведение
+## Behaviour
 
-- При 429 (rate limit), 5xx и сетевых сбоях сообщение остаётся в очереди до следующего круга; `failed` — только при отказах 4xx.
-- В ошибке — причина от Telegram или Discord, без URL (в URL Telegram живёт токен).
-- Если сервер панели сам достаёт до Telegram и Discord (хостинг не в РФ), ботов можно запустить прямо на нём: `PANEL_URL` тогда — адрес панели или `http://127.0.0.1:8090` (с ним в `BOT_ALLOWED_IPS` нужен `127.0.0.1`).
+- On 429 (rate limit), 5xx and network failures the message stays in the queue until the next round; `failed` is set only on 4xx rejections.
+- Errors carry the reason from Telegram or Discord, without the URL (Telegram puts the token in the URL).
+- If the panel server can reach Telegram and Discord itself, the bots can run right on it: `PANEL_URL` is then the panel's address or `http://127.0.0.1:8090` (which needs `127.0.0.1` in `BOT_ALLOWED_IPS`).
